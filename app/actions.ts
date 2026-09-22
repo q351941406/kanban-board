@@ -160,8 +160,10 @@ export async function deleteSubtask(id: string) {
 export async function createProject(name: string) {
   const user = await getCurrentUser();
   if (!user) throw new Error('未登录');
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error('项目名称不能为空');
   const project = await prisma.project.create({
-    data: { name, userId: user.id },
+    data: { name: trimmed, userId: user.id },
   });
   revalidatePath('/');
   return project;
@@ -179,11 +181,13 @@ export async function getProjects() {
 export async function renameProject(id: string, name: string) {
   const user = await getCurrentUser();
   if (!user) throw new Error('未登录');
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error('项目名称不能为空');
   const project = await prisma.project.findFirst({
     where: { id, userId: user.id },
   });
   if (!project) throw new Error('项目不存在');
-  await prisma.project.update({ where: { id }, data: { name } });
+  await prisma.project.update({ where: { id }, data: { name: trimmed } });
   revalidatePath('/');
 }
 
@@ -194,6 +198,24 @@ export async function deleteProject(id: string) {
     where: { id, userId: user.id },
   });
   if (!project) throw new Error('项目不存在');
-  await prisma.project.delete({ where: { id } });
+
+  // 显式清理关联数据，不单纯依赖数据库外键级联
+  const cards = await prisma.card.findMany({
+    where: { projectId: id, userId: user.id },
+    select: { id: true },
+  });
+  const cardIds = cards.map(c => c.id);
+
+  await prisma.$transaction([
+    ...(cardIds.length
+      ? [
+          prisma.comment.deleteMany({ where: { cardId: { in: cardIds } } }),
+          prisma.subtask.deleteMany({ where: { cardId: { in: cardIds } } }),
+          prisma.card.deleteMany({ where: { id: { in: cardIds } } }),
+        ]
+      : []),
+    prisma.project.delete({ where: { id } }),
+  ]);
+
   revalidatePath('/');
 }
