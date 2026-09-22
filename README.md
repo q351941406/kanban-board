@@ -47,8 +47,8 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/bumihtimlover85/my-account.git
-cd my-account
+git clone https://github.com/bumihtimlover85/kanban-board.git
+cd kanban-board
 
 # 安装依赖
 npm install
@@ -63,7 +63,7 @@ cp .env.example .env
 创建 `.env` 文件：
 
 ```env
-POSTGRES_PRISMA_URL="postgresql://用户名:密码@localhost:5432/myaccount"
+POSTGRES_PRISMA_URL="postgresql://用户名:密码@localhost:5432/kanbanboard"
 JWT_SECRET="你的JWT密钥"
 ```
 
@@ -82,7 +82,7 @@ npm run dev
 ## 📁 项目结构
 
 ```
-my-account/
+kanban-board/
 ├── app/                    # Next.js App Router
 │   ├── actions.ts          # Server Actions
 │   ├── layout.tsx          # 根布局
@@ -121,3 +121,9 @@ npm run test:e2e
 ## 📄 许可证
 
 [MIT](LICENSE)
+
+## 🙏 致谢
+
+本项目基于 [bumihtimlover85/my-account](https://github.com/bumihtimlover85/my-account) 的完整提交历史复制而来
+（原名 `my-account`，最初是一个记账应用，后改造为项目管理看板）。
+遵循 MIT 许可证，原始版权归原作者所有，详见 [LICENSE](LICENSE)。
