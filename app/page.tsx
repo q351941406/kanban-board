@@ -55,7 +55,14 @@ export default async function Home({
         
       />
       <main>
-        <KanbanBoard initialCards={cards} currentProjectId={currentProject.id} />
+        {/* key 必须绑定 projectId：KanbanBoard 用 useState(initialCards) 保存卡片，
+            仅在首次挂载时初始化；切换项目时若不加 key，React 会复用同一实例，
+            新 props 被忽略，看板会一直显示上一个项目的卡片 */}
+        <KanbanBoard
+          key={currentProject.id}
+          initialCards={cards}
+          currentProjectId={currentProject.id}
+        />
       </main>
     </div>
   );
