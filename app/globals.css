@@ -3,10 +3,11 @@
    Premium Design System + Tailwind v4
    Inspired by Apple HIG + Emil Kowalski + GSAP
    ============================================ */
-@import "tailwindcss";
+/* 字体由 app/layout.tsx 的 <link> 加载。
+   注意：不要在这里用 @import 引外部字体——tailwind 的 @import 展开后，
+   后续 @import 会被 CSS 处理器丢弃，字体将静默失效。 */
 
-/* ── 字体导入 ── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
 
 /* ── 设计 Token ── */
 @theme {

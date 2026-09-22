@@ -14,9 +14,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <head>
-        {/* 预加载字体 */}
+        {/* 字体：preconnect 建连 + stylesheet 真正加载 */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500&display=swap"
+        />
       </head>
       <body className="antialiased">
         <ThemeProvider>
