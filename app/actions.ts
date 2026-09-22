@@ -51,8 +51,9 @@ export async function createCard(data: { title: string; description?: string; pr
     throw new Error('无效的优先级值');
   }
   
+  // position 必须在同一项目内计算，否则会被其他项目的 position 干扰
   const maxPosition = await prisma.card.aggregate({
-    where: { userId: user.id, status: data.status },
+    where: { userId: user.id, projectId: data.projectId, status: data.status },
     _max: { position: true },
   });
   await prisma.card.create({
@@ -88,21 +89,72 @@ export async function updateCard(id: string, data: { title?: string; description
 export async function deleteCard(id: string) {
   const user = await getCurrentUser();
   if (!user) throw new Error('未登录');
-  await prisma.card.deleteMany({ where: { id, userId: user.id } });
+
+  const card = await prisma.card.findFirst({ where: { id, userId: user.id } });
+  if (!card) return;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.card.delete({ where: { id } });
+
+    // 删除会在该列留下 position 空洞，一并压实保持 0..n-1
+    const rest = await tx.card.findMany({
+      where: { userId: user.id, projectId: card.projectId, status: card.status },
+      orderBy: { position: 'asc' },
+      select: { id: true },
+    });
+    for (let i = 0; i < rest.length; i++) {
+      await tx.card.update({ where: { id: rest[i].id }, data: { position: i } });
+    }
+  });
+
   revalidatePath('/');
 }
 export async function moveCard(id: string, status: string, position: number) {
   const user = await getCurrentUser();
   if (!user) throw new Error('未登录');
-  
+
   if (!VALID_STATUSES.includes(status as ValidStatus)) {
     throw new Error('无效的状态值');
   }
-  
-  await prisma.card.updateMany({
-    where: { id, userId: user.id },
-    data: { status, position },
+
+  const card = await prisma.card.findFirst({ where: { id, userId: user.id } });
+  if (!card) throw new Error('卡片不存在');
+
+  const sourceStatus = card.status;
+
+  await prisma.$transaction(async (tx) => {
+    // 目标列现有卡片（排除自己），按 position 排序后把当前卡片插入目标下标
+    const siblings = await tx.card.findMany({
+      where: { userId: user.id, projectId: card.projectId, status, id: { not: id } },
+      orderBy: { position: 'asc' },
+      select: { id: true },
+    });
+    const at = Math.max(0, Math.min(position, siblings.length));
+    const ordered = [...siblings];
+    ordered.splice(at, 0, { id });
+
+    // 整列重排为 0..n-1：只更新单张会导致 position 重复，
+    // 而 position 重复时 orderBy(position asc) 的排序是不确定的。
+    for (let i = 0; i < ordered.length; i++) {
+      await tx.card.update({
+        where: { id: ordered[i].id },
+        data: ordered[i].id === id ? { position: i, status } : { position: i },
+      });
+    }
+
+    // 跨列移动时把源列的空洞也一并压实，避免 position 值无限增长
+    if (sourceStatus !== status) {
+      const rest = await tx.card.findMany({
+        where: { userId: user.id, projectId: card.projectId, status: sourceStatus },
+        orderBy: { position: 'asc' },
+        select: { id: true },
+      });
+      for (let i = 0; i < rest.length; i++) {
+        await tx.card.update({ where: { id: rest[i].id }, data: { position: i } });
+      }
+    }
   });
+
   revalidatePath('/');
 }
 // Subtask actions

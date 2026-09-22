@@ -46,7 +46,7 @@ test('拖动卡片到其他列后应持久化，切换项目再回来位置保�
       return cols[0]?.name ?? null;
     };
 
-    expect(await columnOf()).toBe('待办');
+    await expect.poll(columnOf, { timeout: 10000 }).toBe('待办');
 
     // 拖到「进行中」
     const cb = (await page.getByText(cardTitle, { exact: true }).first().boundingBox())!;
@@ -81,7 +81,7 @@ test('拖动卡片到其他列后应持久化，切换项目再回来位置保�
     await page.waitForTimeout(800);
     await page.goto(`/?project=${proj.id}`);
     await expect(page.getByText(cardTitle, { exact: true })).toBeVisible({ timeout: 15000 });
-    expect(await columnOf()).toBe('进行中');
+    await expect.poll(columnOf, { timeout: 10000 }).toBe('进行中');
   } finally {
     await prisma.user.delete({ where: { id: user.id } }).catch(() => {});
     await prisma.$disconnect();
