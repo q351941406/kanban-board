@@ -124,6 +124,5 @@ npm run test:e2e
 
 ## 🙏 致谢
 
-本项目基于 [bumihtimlover85/my-account](https://github.com/bumihtimlover85/my-account) 的完整提交历史复制而来
-（原名 `my-account`，最初是一个记账应用，后改造为项目管理看板）。
-遵循 MIT 许可证，原始版权归原作者所有，详见 [LICENSE](LICENSE)。
+本项目源自一个开源项目，其完整的 53 笔上游提交历史已在 git 中保留。
+遵循 MIT 许可证，原始版权归贡献者所有，详见 [LICENSE](LICENSE)。
