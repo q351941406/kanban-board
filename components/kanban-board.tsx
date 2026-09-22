@@ -32,6 +32,9 @@ export default function KanbanBoard({ initialCards, currentProjectId }: KanbanBo
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [addCardStatus, setAddCardStatus] = useState<string | null>(null);
   const cardsRef = useRef(cards);
+  // 记录拖拽开始时的真实状态：handleDragOver 会乐观改写 status，
+  // 若拿改写后的 state 去判断"有没有移动"，拖到空列会被误判为没动。
+  const dragOriginRef = useRef<{ status: string; position: number } | null>(null);
 
   useEffect(() => {
     cardsRef.current = cards;
@@ -48,8 +51,11 @@ export default function KanbanBoard({ initialCards, currentProjectId }: KanbanBo
   );
 
   const handleDragStart = (event: DragStartEvent) => {
-    const card = cards.find((c) => c.id === event.active.id);
-    if (card) setActiveCard(card);
+    const card = cardsRef.current.find((c) => c.id === event.active.id);
+    if (card) {
+      setActiveCard(card);
+      dragOriginRef.current = { status: card.status, position: card.position };
+    }
   };
 
   const handleDragOver = (event: DragOverEvent) => {
@@ -77,47 +83,64 @@ export default function KanbanBoard({ initialCards, currentProjectId }: KanbanBo
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveCard(null);
+    const origin = dragOriginRef.current;
+    dragOriginRef.current = null;
+
     if (!over) return;
+
     const activeId = active.id as string;
     const overId = over.id as string;
-    if (activeId === overId) return;
+    // 从最新快照同步计算，不要在 setState 回调里做赋值副作用：
+    // React 会批处理/延迟执行 updater，那样读到的是初始值，moveCard 将永远不被调用。
+    const current = cardsRef.current;
+    const activeCard = current.find((c) => c.id === activeId);
+    if (!activeCard) return;
 
-    // 获取最新状态并计算 finalStatus
-    let finalStatus = '';
-    let finalPosition = 0;
+    const overCard = current.find((c) => c.id === overId);
+    const overColumn = COLUMNS.find((col) => col.id === overId);
 
+    // 卡片由 useSortable 注册，本身也是 droppable：拖到空列时 over 常常就是
+    // 卡片自己。此时要沿用它的 status（已被 handleDragOver 更新为目标列），
+    // 绝不能因 over === active 就判定"没移动"提前返回——那正是拖拽不生效的原因。
+    const targetStatus = overColumn?.id ?? overCard?.status ?? activeCard.status;
+    const finalStatus = (VALID_STATUSES as readonly string[]).includes(targetStatus)
+      ? targetStatus
+      : activeCard.status;
+
+    // 目标列内的插入下标（排除自身，按 position 排序）
+    const siblings = current
+      .filter((c) => c.status === finalStatus && c.id !== activeId)
+      .sort((a, b) => a.position - b.position);
+
+    let finalPosition = siblings.length;
+    if (overCard && overCard.id !== activeId && overCard.status === finalStatus) {
+      const idx = siblings.findIndex((c) => c.id === overCard.id);
+      if (idx >= 0) finalPosition = idx;
+    }
+
+    // 与拖拽开始前的状态比对，真正没动才跳过
+    const changed = !origin || origin.status !== finalStatus || origin.position !== finalPosition;
+    if (!changed) return;
+
+    // 乐观更新本地 UI：移动卡片并重排目标列 position
     setCards((prev) => {
-      const activeCard = prev.find((c) => c.id === activeId);
-      const overCard = prev.find((c) => c.id === overId);
-      if (!activeCard) return prev;
-
-      const overColumn = COLUMNS.find((col) => col.id === overId);
-      // 安全计算: 取有效的状态值
-      const targetStatus = overCard?.status || overColumn?.id || activeCard.status;
-      finalStatus = VALID_STATUSES.includes(targetStatus as typeof VALID_STATUSES[number])
-        ? targetStatus
-        : activeCard.status;
-
-      const updated = prev.map((c) =>
-        c.id === activeId ? { ...c, status: finalStatus } : c
-      );
-      const sameStatus = updated.filter((c) => c.status === finalStatus);
-      finalPosition = sameStatus.findIndex((c) => c.id === activeId);
-
-      return updated.map((c) => {
-        if (c.status === finalStatus) {
-          const pos = sameStatus.findIndex((sc) => sc.id === c.id);
-          return { ...c, position: pos >= 0 ? pos : c.position };
-        }
-        return c;
-      });
+      const others = prev.filter((c) => c.id !== activeId);
+      const moved = { ...activeCard, status: finalStatus, position: finalPosition };
+      const inTarget = others
+        .filter((c) => c.status === finalStatus)
+        .sort((a, b) => a.position - b.position);
+      inTarget.splice(finalPosition, 0, moved);
+      const reindexed = inTarget.map((c, i) => ({ ...c, position: i }));
+      return [...others.filter((c) => c.status !== finalStatus), ...reindexed];
     });
 
-    // 确保 finalStatus 有效后再调用 moveCard
-    if (!finalStatus || !VALID_STATUSES.includes(finalStatus as typeof VALID_STATUSES[number])) {
-      return;
+    // 持久化；失败则从服务端拉回真实状态，避免 UI 与数据库不一致
+    try {
+      await moveCard(activeId, finalStatus, finalPosition);
+    } catch (e) {
+      console.error('移动卡片失败，正在回滚', e);
+      await handleRefresh();
     }
-    await moveCard(activeId, finalStatus, Math.max(0, finalPosition));
   };
 
   const handleRefresh = async () => {
