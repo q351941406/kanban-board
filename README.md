@@ -118,6 +118,51 @@ npm test
 npm run test:e2e
 ```
 
+## 🚀 部署与环境
+
+### 部署链路
+
+| 触发 | Vercel 环境 | 地址 |
+|---|---|---|
+| push `main` | Production | https://board.myaicode.qzz.io |
+| push 其他分支 / 开 PR | Preview | 每次生成临时 URL |
+
+推送到 `main` 即自动发布（Vercel Git 集成），无需手动操作。
+
+### 数据库隔离
+
+生产与预览使用**互相独立的 Neon 分支**，写入不会互相污染：
+
+| Vercel 环境 | Neon 分支 | 用途 |
+|---|---|---|
+| Production | `main`（primary） | 生产数据 |
+| Preview | `preview` | 预览与调试，可随意增删数据、改表结构 |
+| Development | `preview` | 供 `vercel dev` / `vercel env pull` 使用 |
+
+设计要点：
+
+- `preview` 分支从 `main` 分叉，**初始携带一份生产数据副本**，之后两边各自演进（Neon 的 copy-on-write）
+- 每个分支有独立的计算端点，物理隔离 —— 预览环境里怎么折腾都到不了生产
+- 预览端点在空闲时自动挂起，不占用计算额度
+
+### 环境变量
+
+应用**只依赖两个**变量，其余均可忽略：
+
+| 变量 | 说明 |
+|---|---|
+| `POSTGRES_PRISMA_URL` | 数据库连接串，每个环境取各自分支的值 |
+| `JWT_SECRET` | 会话签名密钥，各环境独立（预览环境的 token 无法用于生产） |
+
+> ⚠️ 项目里另有一批 `kanban_board_*` 变量，是 Vercel 的 Neon 集成自动注入的，
+> **代码从未读取**。排查连接问题时，只认 `POSTGRES_PRISMA_URL`。
+
+### 表结构同步
+
+`prisma/schema.prisma` 是唯一事实来源。`vercel-build` 脚本在每次构建时执行
+`prisma db push --accept-data-loss` 同步表结构 —— 所以预览分支上的 schema
+改动**只影响预览分支**，不会波及生产。
+
 ## 📄 许可证
 
 [MIT](LICENSE)
