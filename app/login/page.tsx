@@ -37,7 +37,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm sm:max-w-md animate-scale-in relative z-10 my-auto">
         {/* 双边框卡片 */}
         <div className="p-[1.5px] rounded-2xl bg-gradient-to-b from-border-light/80 to-transparent dark:from-border-light/20">
-          <div className="rounded-[calc(20px-1.5px)] bg-surface dark:bg-surface-elevated shadow-elevated">
+          <div className="rounded-[calc(20px_-_1.5px)] bg-surface dark:bg-surface-elevated shadow-elevated">
             <div className="p-8 sm:p-10">
               {/* Logo */}
               <div className="flex flex-col items-center mb-8">

@@ -42,6 +42,18 @@ test('同列拖拽插入与删除后，position 始终保持 0..n-1 无重复', 
   const expectStrict = async (n: number) =>
     expect.poll(positions, { timeout: 15000 }).toEqual([...Array(n).keys()]);
 
+  // boundingBox() 偶发返回 null：此时元素其实完全正常（display/visibility/rect 都对），
+  // 是 Playwright 在导航与 React 重渲染交界处的取样竞态。实测同一元素下一轮就有值，
+  // 所以这里重试取框，而不是让整条回归测试随机变红。
+  const boxOf = async (loc: import('@playwright/test').Locator) => {
+    for (let i = 0; i < 40; i++) {
+      const bb = await loc.boundingBox();
+      if (bb) return bb;
+      await page.waitForTimeout(50);
+    }
+    throw new Error('boundingBox 连续 2s 为 null');
+  };
+
   const dragOnto = async (source: string, target: string) => {
     // 删除卡片后页面会刷新，卡片可能短暂消失，必须显式等待可见再取坐标
     // （否则 boundingBox() 返回 null，取 .x 会直接抛错）
@@ -49,8 +61,8 @@ test('同列拖拽插入与删除后，position 始终保持 0..n-1 无重复', 
     const targetLoc = page.getByText(target, { exact: true }).first();
     await expect(sourceLoc).toBeVisible({ timeout: 15000 });
     await expect(targetLoc).toBeVisible({ timeout: 15000 });
-    const sb = (await sourceLoc.boundingBox())!;
-    const tb = (await targetLoc.boundingBox())!;
+    const sb = await boxOf(sourceLoc);
+    const tb = await boxOf(targetLoc);
     await page.mouse.move(sb.x + sb.width / 2, sb.y + sb.height / 2);
     await page.mouse.down();
     await page.waitForTimeout(150);
