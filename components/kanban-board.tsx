@@ -14,6 +14,7 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { Card, COLUMNS } from '@/types';
+import Toast, { useToasts } from '@/components/ui/toast';
 import KanbanColumn from './kanban-column';
 import KanbanCard from './kanban-card';
 import CardModal from './card-modal';
@@ -41,6 +42,11 @@ export default function KanbanBoard({ initialCards, currentProjectId }: KanbanBo
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [addCardStatus, setAddCardStatus] = useState<string | null>(null);
   const cardsRef = useRef(cards);
+  // 串行化持久化：快速连续拖拽时，两次 moveCard 会并发执行，
+  // 而 moveCard 内部是「读整列 → 重排 → 逐条 update」的读改写，
+  // 并发会互相覆盖。这里用 Promise 链把请求排队，保证顺序。
+  const moveQueueRef = useRef<Promise<unknown>>(Promise.resolve());
+  const { toasts, push, dismiss } = useToasts();
   // 记录拖拽开始时的真实状态：handleDragOver 会乐观改写 status，
   // 若拿改写后的 state 去判断"有没有移动"，拖到空列会被误判为没动。
   const dragOriginRef = useRef<{ status: string; position: number } | null>(null);
@@ -49,10 +55,27 @@ export default function KanbanBoard({ initialCards, currentProjectId }: KanbanBo
   // 用布尔标记 + 定时复位，而不是存时间戳：Date.now() 是 impure 调用，
   // 放在组件函数体里会被 react-hooks/purity 判为渲染期调用。
   const justDraggedRef = useRef(false);
+  // 拖拽开始时的完整快照：保存失败、或落在看板外时用来还原 UI
+  const dragSnapshotRef = useRef<Card[] | null>(null);
 
-  useEffect(() => {
-    cardsRef.current = cards;
-  }, [cards]);
+  // 统一的状态写入口：同步更新 ref 与 state。
+  // 以前 cardsRef 靠 useEffect 同步，而 handleDragOver 在一次拖拽里会连续
+  // 多次 setCards；拖得足够快时 React 还没提交并跑完 effect，
+  // handleDragEnd 读到的就是过期快照，会把目标状态算错。
+  // 在这里同步写 ref，保证 handleDragEnd 拿到的永远是最新值。
+  const applyCards = useCallback((updater: (prev: Card[]) => Card[]) => {
+    const next = updater(cardsRef.current);
+    cardsRef.current = next;
+    setCards(next);
+  }, []);
+
+  // 把看板恢复到拖拽开始前的真实状态（拖拽失败、或落在看板外时用）
+  const revertToOrigin = useCallback((snapshot: Card[] | null) => {
+    if (snapshot) {
+      cardsRef.current = snapshot;
+      setCards(snapshot);
+    }
+  }, []);
 
   const sensors = useSensors(
     // 必须显式区分 mouse / touch：PointerSensor 会用同一套约束接管两者，
@@ -78,6 +101,7 @@ export default function KanbanBoard({ initialCards, currentProjectId }: KanbanBo
 
   const handleDragStart = (event: DragStartEvent) => {
     justDraggedRef.current = false;
+    dragSnapshotRef.current = cardsRef.current;
     const card = cardsRef.current.find((c) => c.id === event.active.id);
     if (card) {
       setActiveCard(card);
@@ -90,18 +114,21 @@ export default function KanbanBoard({ initialCards, currentProjectId }: KanbanBo
     if (!over) return;
     const activeId = active.id as string;
     const overId = over.id as string;
-    const activeCard = cards.find((c) => c.id === activeId);
-    const overCard = cards.find((c) => c.id === overId);
+    // 读 cardsRef 而不是渲染期的 cards：一次拖拽里 handleDragOver 会连续触发，
+    // 渲染期的 cards 可能还没跟上，而 cardsRef 由 applyCards 同步写入，永远是真值。
+    const snapshot = cardsRef.current;
+    const activeCard = snapshot.find((c) => c.id === activeId);
+    const overCard = snapshot.find((c) => c.id === overId);
     if (!activeCard) return;
     const overColumn = COLUMNS.find((col) => col.id === overId);
     if (overColumn && activeCard.status !== overColumn.id) {
-      setCards((prev) =>
+      applyCards((prev) =>
         prev.map((c) => (c.id === activeId ? { ...c, status: overColumn.id } : c))
       );
       return;
     }
     if (overCard && activeCard.status !== overCard.status) {
-      setCards((prev) =>
+      applyCards((prev) =>
         prev.map((c) => (c.id === activeId ? { ...c, status: overCard.status } : c))
       );
     }
@@ -116,7 +143,21 @@ export default function KanbanBoard({ initialCards, currentProjectId }: KanbanBo
     const origin = dragOriginRef.current;
     dragOriginRef.current = null;
 
-    if (!over) return;
+    // 落在看板外：handleDragOver 可能已经把卡片乐观移动过了，
+    // 这里必须还原 —— 否则界面显示的移动并不存在，
+    // 用户只能靠刷新页面才发现真相。
+    if (!over) {
+      const activeIdEarly = active.id as string;
+      const drifted =
+        !!origin &&
+        cardsRef.current.some((c) => c.id === activeIdEarly && c.status !== origin.status);
+      if (drifted) {
+        revertToOrigin(dragSnapshotRef.current);
+        push('info', '未放入任何列，已还原');
+      }
+      dragSnapshotRef.current = null;
+      return;
+    }
 
     const activeId = active.id as string;
     const overId = over.id as string;
@@ -153,7 +194,7 @@ export default function KanbanBoard({ initialCards, currentProjectId }: KanbanBo
     if (!changed) return;
 
     // 乐观更新本地 UI：移动卡片并重排目标列 position
-    setCards((prev) => {
+    applyCards((prev) => {
       const others = prev.filter((c) => c.id !== activeId);
       const moved = { ...activeCard, status: finalStatus, position: finalPosition };
       const inTarget = others
@@ -164,13 +205,25 @@ export default function KanbanBoard({ initialCards, currentProjectId }: KanbanBo
       return [...others.filter((c) => c.status !== finalStatus), ...reindexed];
     });
 
-    // 持久化；失败则从服务端拉回真实状态，避免 UI 与数据库不一致
-    try {
-      await moveCard(activeId, finalStatus, finalPosition);
-    } catch (e) {
-      console.error('移动卡片失败，正在回滚', e);
-      await handleRefresh();
-    }
+    const targetTitle = COLUMNS.find((c) => c.id === finalStatus)?.title ?? finalStatus;
+
+    // 持久化。排队执行，避免快速连续拖拽时两次 moveCard 并发——
+    // moveCard 内部是「读整列 → 重排 → 逐条 update」的读改写，并发会互相覆盖。
+    // 无论成功失败都明确反馈：否则乐观更新看起来像生效了，
+    // 用户只能刷新页面才知道数据到底有没有落库。
+    moveQueueRef.current = moveQueueRef.current
+      .then(() => moveCard(activeId, finalStatus, finalPosition))
+      .then(() => {
+        push('success', `已移动到「${targetTitle}」`);
+      })
+      .catch((e) => {
+        console.error('移动卡片失败，正在回滚', e);
+        push('error', '移动失败，已还原');
+        return handleRefresh();
+      })
+      .finally(() => {
+        dragSnapshotRef.current = null;
+      });
   };
 
   const handleCardClick = (card: Card) => {
@@ -184,6 +237,7 @@ export default function KanbanBoard({ initialCards, currentProjectId }: KanbanBo
     const res = await fetch(`/api/cards?projectId=${encodeURIComponent(currentProjectId)}`);
     if (!res.ok) return;
     const data = await res.json();
+    cardsRef.current = data;
     setCards(data);
   };
 
@@ -223,6 +277,8 @@ export default function KanbanBoard({ initialCards, currentProjectId }: KanbanBo
           )}
         </DragOverlay>
       </DndContext>
+
+      <Toast toasts={toasts} onDismiss={dismiss} />
 
       {selectedCard && (
         <CardModal
