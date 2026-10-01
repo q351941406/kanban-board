@@ -23,9 +23,9 @@ export default async function Home({
   // 如果没有项目，显示空状态
   if (projects.length === 0) {
     return (
-      <div className="min-h-screen bg-surface-muted transition-colors duration-500">
+      <div className="h-dvh flex flex-col overflow-hidden bg-surface-muted transition-colors duration-500 pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]">
         <Navbar user={{ id: user.id, name: user.name, email: user.email }} projects={[]} currentProjectId={null}  />
-        <main className="flex items-center justify-center h-[calc(100vh-100px)]">
+        <main className="flex-1 min-h-0 flex items-center justify-center">
           <EmptyState />
         </main>
       </div>
@@ -47,14 +47,14 @@ export default async function Home({
   });
 
   return (
-    <div className="min-h-screen bg-surface-muted transition-colors duration-500">
+    <div className="h-dvh flex flex-col overflow-hidden bg-surface-muted transition-colors duration-500 pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]">
       <Navbar
         user={{ id: user.id, name: user.name, email: user.email }}
         projects={projects.map(p => ({ id: p.id, name: p.name, userId: p.userId, createdAt: p.createdAt, updatedAt: p.updatedAt }))}
         currentProjectId={currentProject.id}
         
       />
-      <main>
+      <main className="flex-1 min-h-0 flex flex-col">
         {/* key 必须绑定 projectId：KanbanBoard 用 useState(initialCards) 保存卡片，
             仅在首次挂载时初始化；切换项目时若不加 key，React 会复用同一实例，
             新 props 被忽略，看板会一直显示上一个项目的卡片 */}

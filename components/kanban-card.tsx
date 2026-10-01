@@ -58,7 +58,8 @@ export default function KanbanCard({ card, onClick }: KanbanCardProps) {
         {/* 拖动把手 + 优先级 */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5">
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            {/* 触屏没有 hover，把手必须常显——它是「长按可拖拽」的唯一提示 */}
+            <div className="opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 transition-opacity duration-200">
               <GripVertical className="w-3.5 h-3.5 text-text-tertiary/40" />
             </div>
             <span className={`

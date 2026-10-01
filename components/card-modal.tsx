@@ -1,8 +1,9 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Card, PRIORITIES } from '@/types';
 import { updateCard, addSubtask, toggleSubtask, deleteSubtask, addComment, deleteCard } from '@/app/actions';
 import { X, Save, Trash2, Plus, ListChecks, MessageSquare, Send, CheckSquare } from 'lucide-react';
+import Sheet from '@/components/ui/sheet';
 
 interface CardModalProps {
   card: Card;
@@ -17,24 +18,12 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
   const [newSubtask, setNewSubtask] = useState('');
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
-  const [visible, setVisible] = useState(false);
-  const overlayRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    requestAnimationFrame(() => setVisible(true));
-  }, []);
-
-  const handleClose = () => {
-    setVisible(false);
-    setTimeout(onClose, 200);
-  };
-
   const handleSave = async () => {
     setLoading(true);
     await updateCard(card.id, { title, description, priority });
     onUpdate();
     setLoading(false);
-    handleClose();
+    onClose();
   };
 
   const handleAddSubtask = async () => {
@@ -60,7 +49,7 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
     if (confirm('确定删除此卡片？')) {
       await deleteCard(card.id);
       onUpdate();
-      handleClose();
+      onClose();
     }
   };
 
@@ -68,29 +57,9 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
   const totalSubtasks = card.subtasks.length;
 
   return (
-    <div
-      ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={(e) => { if (e.target === overlayRef.current) handleClose(); }}
-    >
-      {/* 遮罩 */}
-      <div
-        className={`absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          visible ? 'opacity-100' : 'opacity-0'
-        }`}
-      />
-
-      {/* 模态框 */}
-      <div
-        className={`
-          relative bg-surface dark:bg-surface-elevated rounded-2xl shadow-modal w-full max-w-lg max-h-[85vh] overflow-y-auto
-          border border-border-light/50
-          transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]
-          ${visible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'}
-        `}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-6">
+    <Sheet onClose={onClose} label="卡片详情">
+      {/* 底部 padding 叠加安全区，Home Indicator 不再压住最后一个输入框 */}
+      <div className="p-5 sm:p-6 pb-[calc(1.25rem_+_env(safe-area-inset-bottom,0px))] sm:pb-6">
           {/* 头部 */}
           <div className="flex items-start justify-between mb-5">
             <div className="flex-1 mr-3">
@@ -105,8 +74,8 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
               />
             </div>
             <button
-              onClick={handleClose}
-              className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center
+              onClick={onClose}
+              className="flex-shrink-0 w-8 h-8 pointer-coarse:w-11 pointer-coarse:h-11 rounded-xl flex items-center justify-center
                 text-text-tertiary hover:text-text-primary hover:bg-surface-hover
                 transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)]
                 active:scale-90"
@@ -126,7 +95,7 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
                   key={key}
                   onClick={() => setPriority(key)}
                   className={`
-                    px-3 py-1.5 rounded-lg text-xs font-medium
+                    px-3 py-1.5 pointer-coarse:px-4 pointer-coarse:py-3.5 rounded-lg text-xs font-medium
                     transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)]
                     active:scale-95
                     ${priority === key
@@ -166,7 +135,7 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
               onClick={handleSave}
               disabled={loading}
               className="
-                flex items-center gap-1.5 px-4 py-2 rounded-xl
+                flex items-center gap-1.5 px-4 py-2 pointer-coarse:py-3 rounded-xl
                 bg-gradient-to-br from-brand-500 to-brand-600 text-white text-sm font-medium
                 hover:from-brand-600 hover:to-brand-700
                 shadow-lg shadow-brand-500/15
@@ -182,7 +151,7 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
             <button
               onClick={handleDelete}
               className="
-                flex items-center gap-1.5 px-3 py-2 rounded-xl
+                flex items-center gap-1.5 px-3 py-2 pointer-coarse:px-4 pointer-coarse:py-3 rounded-xl
                 text-text-tertiary hover:text-error hover:bg-error-bg
                 text-sm transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)]
                 active:scale-95
@@ -240,12 +209,13 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
                       await deleteSubtask(sub.id);
                       onUpdate();
                     }}
-                    className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-lg flex items-center justify-center
+                    className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100
+                      w-8 h-8 pointer-coarse:w-11 pointer-coarse:h-11 rounded-lg flex items-center justify-center shrink-0
                       text-text-tertiary hover:text-error hover:bg-error/10
                       transition-all duration-200"
                     title="删除子任务"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
               ))}
@@ -266,7 +236,7 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
               />
               <button
                 onClick={handleAddSubtask}
-                className="w-9 h-9 rounded-xl flex items-center justify-center
+                className="w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 rounded-xl flex items-center justify-center shrink-0
                   bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400
                   hover:bg-brand-200 dark:hover:bg-brand-900/50
                   transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)]
@@ -311,7 +281,7 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
               />
               <button
                 onClick={handleAddComment}
-                className="w-9 h-9 rounded-xl flex items-center justify-center
+                className="w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 rounded-xl flex items-center justify-center shrink-0
                   bg-gradient-to-br from-brand-500 to-brand-600 text-white
                   hover:from-brand-600 hover:to-brand-700
                   shadow-lg shadow-brand-500/15
@@ -322,8 +292,7 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
               </button>
             </div>
           </div>
-        </div>
       </div>
-    </div>
+    </Sheet>
   );
 }

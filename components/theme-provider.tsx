@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef, useSyncExternalStore } from 'react';
 import { MoonStar, Sun } from 'lucide-react';
 
 type Theme = 'light' | 'dark';
@@ -13,20 +13,29 @@ export function useTheme() {
   return useContext(ThemeContext);
 }
 
+const emptySubscribe = () => () => {};
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('light');
-  const [mounted, setMounted] = useState(false);
+  // 主题初值只能在浏览器里读（localStorage / matchMedia），服务端读不到。
+  // 但首帧渲染仍由下面的 mounted 挡掉（SSR 输出不带 .dark），
+  // 所以惰性初始化不会造成 hydration mismatch。
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === 'undefined') return 'light';
+    const stored = localStorage.getItem('theme') as Theme | null;
+    return stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  });
+  // 「是否已 hydration」用 useSyncExternalStore 表达，而不是 useEffect + setState：
+  // 后者会被 react-hooks/set-state-in-effect 判为级联渲染。语义一致 ——
+  // hydration 期间返回 server snapshot(false)，hydrate 完成后返回 true 并触发一次重渲染。
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
   const [flash, setFlash] = useState<'light-to-dark' | 'dark-to-light' | null>(null);
   const flashRef = useRef<NodeJS.Timeout | null>(null);
 
+
   useEffect(() => {
-    const stored = localStorage.getItem('theme') as Theme | null;
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const initial = stored || (prefersDark ? 'dark' : 'light');
-    setTheme(initial);
-    document.documentElement.classList.toggle('dark', initial === 'dark');
-    setMounted(true);
-  }, []);
+    // 副作用：把主题同步到 <html>，供全局 dark: 变体使用
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  }, [theme]);
 
   const toggleTheme = useCallback(() => {
     setTheme((prev) => {
@@ -71,7 +80,7 @@ export function ThemeToggle() {
       onClick={toggleTheme}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      className="relative w-9 h-9 flex items-center justify-center rounded-xl
+      className="relative w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 flex items-center justify-center rounded-xl
         bg-surface hover:bg-surface-hover
         border border-border-light
         text-text-tertiary hover:text-text-primary

@@ -27,14 +27,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface-muted p-4 relative overflow-hidden">
+    <div className="min-h-dvh flex items-center justify-center bg-surface-muted pl-[calc(1rem_+_env(safe-area-inset-left,0px))] pr-[calc(1rem_+_env(safe-area-inset-right,0px))] pt-[calc(1rem_+_env(safe-area-inset-top,0px))] pb-[calc(1rem_+_env(safe-area-inset-bottom,0px))] relative overflow-x-hidden">
       {/* 背景装饰 */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-brand-500/5 blur-3xl" />
         <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-brand-400/5 blur-3xl" />
       </div>
 
-      <div className="w-full max-w-sm sm:max-w-md animate-scale-in relative z-10">
+      <div className="w-full max-w-sm sm:max-w-md animate-scale-in relative z-10 my-auto">
         {/* 双边框卡片 */}
         <div className="p-[1.5px] rounded-2xl bg-gradient-to-b from-border-light/80 to-transparent dark:from-border-light/20">
           <div className="rounded-[calc(20px-1.5px)] bg-surface dark:bg-surface-elevated shadow-elevated">

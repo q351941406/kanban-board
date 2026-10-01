@@ -114,7 +114,7 @@ export default function ProjectSwitcher({ projects, currentProjectId }: ProjectS
       <button
         onClick={() => (open ? closeMenu() : setOpen(true))}
         className="
-          flex items-center gap-2 px-3 py-2 rounded-xl
+          flex items-center gap-2 px-3 py-2 pointer-coarse:py-3 rounded-xl
           bg-surface-hover/60 hover:bg-surface-hover
           border border-border-light/50
           text-sm font-medium text-text-primary
@@ -123,7 +123,7 @@ export default function ProjectSwitcher({ projects, currentProjectId }: ProjectS
         "
       >
         <FolderKanban className="w-4 h-4 text-brand-500" />
-        <span className="max-w-[120px] truncate">
+        <span className="max-w-[88px] sm:max-w-[160px] truncate">
           {currentProject?.name || '选择项目'}
         </span>
         <ChevronDown className={`w-3.5 h-3.5 text-text-tertiary transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
@@ -131,7 +131,7 @@ export default function ProjectSwitcher({ projects, currentProjectId }: ProjectS
 
       {open && (
         <div className="
-          absolute top-full left-0 mt-2 w-72
+          absolute top-full left-0 mt-2 w-[min(18rem,calc(100vw_-_2rem))]
           bg-surface border border-border-light
           rounded-2xl shadow-elevated
           py-2 z-50
@@ -252,24 +252,27 @@ export default function ProjectSwitcher({ projects, currentProjectId }: ProjectS
                     )}
                   </button>
 
-                  <div className="flex items-center gap-0.5 pr-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150">
+                  {/* pointer-coarse = 触屏设备：hover 永远不会触发，
+                      Tailwind v4 的 group-hover 被包在 @media (hover: hover) 里，
+                      所以触屏上 opacity-0 就是永久 0。这里对粗指针直接常显。 */}
+                  <div className="flex items-center gap-0.5 pr-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100 transition-opacity duration-150">
                     <button
                       onClick={() => startRename(project)}
                       title="重命名项目"
-                      className="p-1.5 rounded-lg text-text-tertiary
+                      className="p-2 -m-0.5 rounded-lg text-text-tertiary
                         hover:text-brand-600 hover:bg-surface
                         transition-colors duration-200"
                     >
-                      <Pencil className="w-3.5 h-3.5" />
+                      <Pencil className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => { setRenamingId(null); setDeletingId(project.id); }}
                       title="删除项目"
-                      className="p-1.5 rounded-lg text-text-tertiary
+                      className="p-2 -m-0.5 rounded-lg text-text-tertiary
                         hover:text-red-500 hover:bg-surface
                         transition-colors duration-200"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
