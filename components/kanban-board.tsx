@@ -65,10 +65,15 @@ export default function KanbanBoard({ initialCards, currentProjectId }: KanbanBo
     useSensor(TouchSensor, TOUCH_ACTIVATION)
   );
 
+  // 这里额外按 projectId 过滤是刻意的冗余：接口已经按项目过滤了，
+  // 但看板的数据一旦被别的来源污染，渲染层是最后一道防线，
+  // 绝不能把其他项目的卡片画到当前项目里。
   const getCardsByStatus = useCallback(
     (status: string) =>
-      cards.filter((c) => c.status === status).sort((a, b) => a.position - b.position),
-    [cards]
+      cards
+        .filter((c) => c.projectId === currentProjectId && c.status === status)
+        .sort((a, b) => a.position - b.position),
+    [cards, currentProjectId]
   );
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -174,7 +179,10 @@ export default function KanbanBoard({ initialCards, currentProjectId }: KanbanBo
   };
 
   const handleRefresh = async () => {
-    const res = await fetch('/api/cards');
+    // 必须带 projectId：不带的话接口会返回该用户所有项目的卡片，
+    // 新增/删除卡片后就会把别的项目的任务串到当前看板。
+    const res = await fetch(`/api/cards?projectId=${encodeURIComponent(currentProjectId)}`);
+    if (!res.ok) return;
     const data = await res.json();
     setCards(data);
   };
