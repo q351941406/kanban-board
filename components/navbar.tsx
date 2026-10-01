@@ -27,7 +27,7 @@ export default function Navbar({ user, projects, currentProjectId }: NavbarProps
   };
 
   return (
-    <nav className="sticky top-0 z-50 w-full pt-4 px-4 sm:px-6">
+    <nav className="shrink-0 z-50 w-full pt-[calc(1rem_+_env(safe-area-inset-top,0px))] px-4 sm:px-6">
       <div className="mx-auto max-w-7xl">
         <div className="
           flex items-center justify-between
@@ -39,8 +39,8 @@ export default function Navbar({ user, projects, currentProjectId }: NavbarProps
           transition-all duration-500
         ">
           {/* Left: Logo + Project Switcher */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-brand-600 text-white shadow-sm">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-xl bg-brand-600 text-white shadow-sm">
               <LayoutGrid className="w-4 h-4" />
             </div>
             <span className="font-semibold text-text-primary text-sm tracking-tight hidden sm:block">
@@ -62,13 +62,13 @@ export default function Navbar({ user, projects, currentProjectId }: NavbarProps
                 <button
                   onClick={() => setMenuOpen(!menuOpen)}
                   className="
-                    flex items-center gap-2 px-2.5 py-1.5 rounded-xl
+                    flex items-center gap-2 px-2.5 py-1.5 pointer-coarse:py-2.5 rounded-xl
                     hover:bg-surface-hover
                     transition-all duration-200
                   "
                 >
                   <div className="
-                    w-7 h-7 rounded-lg
+                    w-7 h-7 shrink-0 rounded-lg
                     bg-gradient-to-br from-brand-400 to-brand-600
                     flex items-center justify-center
                     text-white text-xs font-semibold

@@ -74,7 +74,7 @@ export default function KanbanColumn({ id, title, cards, onCardClick, onAddCard 
           </div>
           <button
             onClick={onAddCard}
-            className="w-7 h-7 rounded-lg flex items-center justify-center
+            className="w-7 h-7 pointer-coarse:w-11 pointer-coarse:h-7 rounded-lg flex items-center justify-center shrink-0
               text-text-tertiary hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20
               transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)]
               active:scale-90"

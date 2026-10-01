@@ -219,6 +219,17 @@ body {
 .animate-spin-slow { animation: spin-slow 3s linear infinite; }
 .animate-bounce-gentle { animation: bounce-gentle 2s var(--ease-smooth) infinite; }
 
+/* ── 移动端视口与安全区 ──
+   100vh 在手机上是「地址栏收起时」的大视口高度，地址栏展开时可视区更矮，
+   用它算高度会让底部内容被裁掉且无法滚动 → 布局统一改用 dvh（见 app/page.tsx）。
+
+   安全区注意：不要在这里定义 .safe-t / .safe-x 之类的工具类。
+   Tailwind v4 的工具类位于 @layer utilities，而本文件的裸规则不分层，
+   后者会赢并覆盖 pt-4 / p-4 —— 实测生产构建下登录页 padding-left 变成 0px。
+   正确做法是在使用处写成 calc(基础值 + env(...)) 的单条声明，
+   见 navbar.tsx / app/login/page.tsx / components/ui/sheet.tsx。 */
+
+
 /* ── 入场延迟 ── */
 .delay-1 { animation-delay: 0.05s; }
 .delay-2 { animation-delay: 0.1s; }

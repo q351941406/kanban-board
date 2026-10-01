@@ -1,8 +1,9 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { createCard } from '@/app/actions';
 import { COLUMNS, PRIORITIES } from '@/types';
 import { X, Plus } from 'lucide-react';
+import Sheet from '@/components/ui/sheet';
 
 interface AddCardModalProps {
   projectId: string;
@@ -17,49 +18,19 @@ export default function AddCardModal({ defaultStatus, onClose, onUpdate, project
   const [priority, setPriority] = useState('medium');
   const [status, setStatus] = useState(defaultStatus);
   const [loading, setLoading] = useState(false);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    requestAnimationFrame(() => setVisible(true));
-  }, []);
-
-  const handleClose = () => {
-    setVisible(false);
-    setTimeout(onClose, 200);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
     setLoading(true);
     await createCard({ title, description, priority, status, projectId });
     onUpdate();
-    handleClose();
+    onClose();
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={handleClose}
-    >
-      {/* 遮罩 */}
-      <div
-        className={`absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          visible ? 'opacity-100' : 'opacity-0'
-        }`}
-      />
-
-      {/* 模态框 */}
-      <div
-        className={`
-          relative bg-surface dark:bg-surface-elevated rounded-2xl shadow-modal w-full max-w-md
-          border border-border-light/50
-          transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]
-          ${visible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'}
-        `}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-6">
+    <Sheet onClose={onClose} label="新建卡片" maxWidth="max-w-md">
+      {/* 底部 padding 叠加安全区，Home Indicator 不再压住按钮 */}
+      <div className="p-5 sm:p-6 pb-[calc(1.25rem_+_env(safe-area-inset-bottom,0px))] sm:pb-6">
           {/* 头部 */}
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2.5">
@@ -69,8 +40,8 @@ export default function AddCardModal({ defaultStatus, onClose, onUpdate, project
               <h2 className="text-base font-semibold text-text-primary">新建卡片</h2>
             </div>
             <button
-              onClick={handleClose}
-              className="w-8 h-8 rounded-xl flex items-center justify-center
+              onClick={onClose}
+              className="w-8 h-8 pointer-coarse:w-11 pointer-coarse:h-11 rounded-xl flex items-center justify-center
                 text-text-tertiary hover:text-text-primary hover:bg-surface-hover
                 transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)]
                 active:scale-90"
@@ -126,7 +97,7 @@ export default function AddCardModal({ defaultStatus, onClose, onUpdate, project
                     type="button"
                     onClick={() => setStatus(col.id)}
                     className={`
-                      px-3 py-1.5 rounded-lg text-xs font-medium
+                      px-3 py-1.5 pointer-coarse:px-4 pointer-coarse:py-3.5 rounded-lg text-xs font-medium
                       transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)]
                       active:scale-95
                       ${status === col.id
@@ -153,7 +124,7 @@ export default function AddCardModal({ defaultStatus, onClose, onUpdate, project
                     type="button"
                     onClick={() => setPriority(key)}
                     className={`
-                      px-3 py-1.5 rounded-lg text-xs font-medium
+                      px-3 py-1.5 pointer-coarse:px-4 pointer-coarse:py-3.5 rounded-lg text-xs font-medium
                       transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)]
                       active:scale-95
                       ${priority === key
@@ -174,7 +145,7 @@ export default function AddCardModal({ defaultStatus, onClose, onUpdate, project
                 type="submit"
                 disabled={loading}
                 className="
-                  flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl
+                  flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 pointer-coarse:py-3.5 rounded-xl
                   bg-gradient-to-br from-brand-500 to-brand-600 text-white text-sm font-medium
                   hover:from-brand-600 hover:to-brand-700
                   shadow-lg shadow-brand-500/15
@@ -189,8 +160,8 @@ export default function AddCardModal({ defaultStatus, onClose, onUpdate, project
               </button>
               <button
                 type="button"
-                onClick={handleClose}
-                className="px-4 py-2.5 rounded-xl text-sm text-text-secondary
+                onClick={onClose}
+                className="px-4 py-2.5 pointer-coarse:py-3.5 rounded-xl text-sm text-text-secondary
                   hover:bg-surface-hover
                   transition-all duration-200"
               >
@@ -198,8 +169,7 @@ export default function AddCardModal({ defaultStatus, onClose, onUpdate, project
               </button>
             </div>
           </form>
-        </div>
       </div>
-    </div>
+    </Sheet>
   );
 }

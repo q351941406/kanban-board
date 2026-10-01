@@ -71,7 +71,7 @@ export function ThemeToggle() {
       onClick={toggleTheme}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      className="relative w-9 h-9 flex items-center justify-center rounded-xl
+      className="relative w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 flex items-center justify-center rounded-xl
         bg-surface hover:bg-surface-hover
         border border-border-light
         text-text-tertiary hover:text-text-primary
