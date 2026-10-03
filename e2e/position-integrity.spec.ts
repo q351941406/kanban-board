@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
+import { registerUser } from './helpers';
 
 const prisma = new PrismaClient();
 
@@ -14,11 +15,7 @@ test('同列拖拽插入与删除后，position 始终保持 0..n-1 无重复', 
 
   page.on('dialog', (d) => d.accept()); // 删除确认用的是原生 confirm
 
-  await page.goto('/register');
-  await page.getByPlaceholder('你的名字').fill('位置回归');
-  await page.getByPlaceholder('your@email.com').fill(email);
-  await page.getByPlaceholder('至少 6 位字符').fill('password123');
-  await page.getByRole('button', { name: '注册' }).click();
+  await registerUser(page, '位置回归', email);
   await page.waitForURL('**/', { timeout: 20000 });
 
   const user = await prisma.user.findUnique({ where: { email } });

@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 
@@ -8,6 +8,18 @@ export const metadata: Metadata = {
   icons: {
     icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="%2310b981"/><text x="16" y="22" text-anchor="middle" fill="white" font-size="18" font-weight="bold" font-family="system-ui">K</text></svg>',
   },
+};
+
+// 移动端视口策略：
+//  - viewportFit=cover：让 env(safe-area-inset-*) 真正生效，否则刘海/Home Indicator
+//    的安全区恒为 0，底部抽屉的按钮会被系统条压住。
+//  - interactiveWidget=resizes-content：Android 软键盘弹起时收缩布局视口，
+//    而不是把页面往上顶，避免输入框被推出屏幕。
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  interactiveWidget: 'resizes-content',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

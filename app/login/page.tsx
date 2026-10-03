@@ -60,7 +60,7 @@ export default function LoginPage() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full border border-border-light rounded-xl pl-10 pr-3.5 py-2.5 text-sm
+                      className="w-full border border-border-light rounded-xl pl-10 pr-3.5 py-2.5 text-base sm:text-sm
                         bg-surface dark:bg-surface-muted text-text-primary placeholder:text-text-tertiary
                         outline-none transition-all duration-200
                         focus:border-brand-400 focus:ring-2 focus:ring-brand-500/15"
@@ -81,7 +81,7 @@ export default function LoginPage() {
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full border border-border-light rounded-xl pl-10 pr-10 py-2.5 text-sm
+                      className="w-full border border-border-light rounded-xl pl-10 pr-10 py-2.5 text-base sm:text-sm
                         bg-surface dark:bg-surface-muted text-text-primary placeholder:text-text-tertiary
                         outline-none transition-all duration-200
                         focus:border-brand-400 focus:ring-2 focus:ring-brand-500/15"

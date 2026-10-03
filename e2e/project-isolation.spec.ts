@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
+import { registerUser } from './helpers';
 
 const prisma = new PrismaClient();
 
@@ -14,11 +15,7 @@ test('卡片不会串到其他项目：新增/子任务/删除后看板只显示
   const tag = Date.now();
   const email = `e2e-iso-${tag}@test.local`;
 
-  await page.goto('/register');
-  await page.getByPlaceholder('你的名字').fill('隔离回归');
-  await page.getByPlaceholder('your@email.com').fill(email);
-  await page.getByPlaceholder('至少 6 位字符').fill('password123');
-  await page.getByRole('button', { name: '注册', exact: true }).click();
+  await registerUser(page, '隔离回归', email);
   await page.waitForURL('**/', { timeout: 20000 });
 
   const user = await prisma.user.findUnique({ where: { email } });
