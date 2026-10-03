@@ -198,7 +198,7 @@ export default function ProjectSwitcher({ projects, currentProjectId }: ProjectS
                         if (e.key === 'Enter') handleRename(project.id);
                         if (e.key === 'Escape') { setRenamingId(null); setRenameValue(''); }
                       }}
-                      className="flex-1 min-w-0 px-3 py-1.5 rounded-lg text-sm
+                      className="flex-1 min-w-0 px-3 py-1.5 rounded-lg text-base sm:text-sm
                         bg-surface-hover border border-border-light
                         text-text-primary
                         outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20
@@ -293,7 +293,7 @@ export default function ProjectSwitcher({ projects, currentProjectId }: ProjectS
                     if (e.key === 'Escape') { setCreating(false); setNewName(''); }
                   }}
                   placeholder="项目名称"
-                  className="flex-1 min-w-0 px-3 py-1.5 rounded-lg text-sm
+                  className="flex-1 min-w-0 px-3 py-1.5 rounded-lg text-base sm:text-sm
                     bg-surface-hover border border-border-light
                     text-text-primary placeholder:text-text-tertiary
                     outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20

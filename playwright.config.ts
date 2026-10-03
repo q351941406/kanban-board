@@ -14,7 +14,15 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
+      testIgnore: /mobile-.*\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      // 只跑移动端用例：底部抽屉/安全区/软键盘相关的回归，
+      // 桌面视口永远测不出来。
+      name: 'mobile-chrome',
+      testMatch: /mobile-.*\.spec\.ts/,
+      use: { ...devices['Pixel 7'] },
     },
   ],
   webServer: {

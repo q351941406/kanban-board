@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
+import { registerUser } from './helpers';
 
 const prisma = new PrismaClient();
 
@@ -11,11 +12,7 @@ const prisma = new PrismaClient();
 test('拖动卡片到其他列后应持久化，切换项目再回来位置保持', async ({ page }) => {
   const email = `e2e-drag-${Date.now()}@test.local`;
 
-  await page.goto('/register');
-  await page.getByPlaceholder('你的名字').fill('拖拽回归');
-  await page.getByPlaceholder('your@email.com').fill(email);
-  await page.getByPlaceholder('至少 6 位字符').fill('password123');
-  await page.getByRole('button', { name: '注册' }).click();
+  await registerUser(page, '拖拽回归', email);
   await page.waitForURL('**/', { timeout: 20000 });
 
   const cardTitle = `卡片-${Date.now()}`;

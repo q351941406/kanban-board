@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createCard } from '@/app/actions';
 import { COLUMNS, PRIORITIES } from '@/types';
 import { X, Plus } from 'lucide-react';
@@ -18,6 +18,14 @@ export default function AddCardModal({ defaultStatus, onClose, onUpdate, project
   const [priority, setPriority] = useState('medium');
   const [status, setStatus] = useState(defaultStatus);
   const [loading, setLoading] = useState(false);
+  const titleRef = useRef<HTMLInputElement>(null);
+
+  // 只在桌面端自动聚焦：移动端一打开就弹键盘会把可视区压掉一半，
+  // 面板在键盘弹出动画里来回跳，反而看不清自己要填什么。
+  useEffect(() => {
+    if (window.matchMedia('(pointer: coarse)').matches) return;
+    titleRef.current?.focus();
+  }, []);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -57,14 +65,14 @@ export default function AddCardModal({ defaultStatus, onClose, onUpdate, project
                 标题 <span className="text-error">*</span>
               </label>
               <input
+                ref={titleRef}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full border border-border-light rounded-xl px-3.5 py-2.5 text-sm
+                className="w-full border border-border-light rounded-xl px-3.5 py-2.5 text-base sm:text-sm
                   bg-surface dark:bg-surface-muted text-text-primary placeholder:text-text-tertiary
                   outline-none transition-all duration-200
                   focus:border-brand-400 focus:ring-2 focus:ring-brand-500/15"
                 placeholder="输入卡片标题..."
-                autoFocus
                 required
               />
             </div>
@@ -77,7 +85,7 @@ export default function AddCardModal({ defaultStatus, onClose, onUpdate, project
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full border border-border-light rounded-xl px-3.5 py-2.5 text-sm
+                className="w-full border border-border-light rounded-xl px-3.5 py-2.5 text-base sm:text-sm
                   bg-surface dark:bg-surface-muted text-text-primary placeholder:text-text-tertiary
                   outline-none transition-all duration-200 resize-none h-20
                   focus:border-brand-400 focus:ring-2 focus:ring-brand-500/15"

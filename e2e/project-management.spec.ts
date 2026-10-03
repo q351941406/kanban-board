@@ -1,15 +1,12 @@
 import { test, expect } from '@playwright/test';
+import { registerUser } from './helpers';
 
 test.describe('项目管理：创建 / 重命名 / 删除', () => {
   test('完整流程', async ({ page }) => {
     const email = `e2e-${Date.now()}@test.local`;
 
     // ── 1. 注册并进入看板 ──
-    await page.goto('/register');
-    await page.getByPlaceholder('你的名字').fill('E2E 测试');
-    await page.getByPlaceholder('your@email.com').fill(email);
-    await page.getByPlaceholder('至少 6 位字符').fill('password123');
-    await page.getByRole('button', { name: '注册', exact: true }).click();
+  await registerUser(page, 'E2E 测试', email);
     await page.waitForURL(/localhost:3000\/$/, { timeout: 20000 });
 
     // ── 2. 创建项目（下拉在创建后会关闭）──
