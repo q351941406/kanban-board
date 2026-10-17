@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { Card, PRIORITIES } from '@/types';
-import { updateCard, addSubtask, toggleSubtask, deleteSubtask, addComment, deleteCard } from '@/app/actions';
+import { Card, COLUMNS, PRIORITIES } from '@/types';
+import { updateCard, moveCard, addSubtask, toggleSubtask, deleteSubtask, addComment, deleteCard } from '@/app/actions';
 import { X, Save, Trash2, Plus, ListChecks, MessageSquare, Send, CheckSquare } from 'lucide-react';
 import Sheet from '@/components/ui/sheet';
 
@@ -15,11 +15,17 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description || '');
   const [priority, setPriority] = useState(card.priority);
+  const [status, setStatus] = useState(card.status);
   const [newSubtask, setNewSubtask] = useState('');
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
   const handleSave = async () => {
     setLoading(true);
+    // 状态变更不能只 update 字段：需要和拖拽一样走 moveCard，
+    // 否则源列会留 position 空洞、目标列可能产生重复 position。
+    if (status !== card.status) {
+      await moveCard(card.id, status, Number.MAX_SAFE_INTEGER);
+    }
     await updateCard(card.id, { title, description, priority });
     onUpdate();
     setLoading(false);
@@ -83,6 +89,35 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
               <X className="w-4 h-4" />
             </button>
           </div>
+
+
+          {/* 状态 */}
+          <div className="mb-5">
+            <label className="block text-xs font-medium text-text-tertiary mb-2 uppercase tracking-wider">
+              状态
+            </label>
+            <div className="flex gap-1.5 flex-wrap">
+              {COLUMNS.map((col) => (
+                <button
+                  key={col.id}
+                  type="button"
+                  onClick={() => setStatus(col.id)}
+                  className={`
+                    px-3 py-1.5 pointer-coarse:px-4 pointer-coarse:py-3.5 rounded-lg text-xs font-medium
+                    transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)]
+                    active:scale-95
+                    ${status === col.id
+                      ? 'bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-sm'
+                      : 'bg-surface-hover text-text-secondary hover:bg-surface-hover/80'
+                    }
+                  `}
+                >
+                  {col.title}
+                </button>
+              ))}
+            </div>
+          </div>
+
 
           {/* 优先级 */}
           <div className="mb-5">
