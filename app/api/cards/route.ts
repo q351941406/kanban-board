@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
     const cards = await prisma.card.findMany({
       where: { userId: user.id, projectId },
-      include: { subtasks: true, comments: { include: { user: true } } },
+      include: { subtasks: true, comments: { include: { user: true } }, attachments: true },
       orderBy: { position: 'asc' },
     });
     return NextResponse.json(cards);

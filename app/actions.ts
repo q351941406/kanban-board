@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { getCurrentUser, signToken, setAuthCookie, clearAuthCookie } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
+import { deleteFromR2 } from '@/lib/r2';
+import { createAttachmentForCard, deleteAttachmentById } from '@/lib/attachments';
 const VALID_STATUSES = ['todo', 'in_progress', 'testing', 'done'] as const;
 const VALID_PRIORITIES = ['high', 'medium', 'low'] as const;
 type ValidStatus = typeof VALID_STATUSES[number];
@@ -90,18 +92,22 @@ export async function deleteCard(id: string) {
   const user = await getCurrentUser();
   if (!user) throw new Error('未登录');
 
-  const card = await prisma.card.findFirst({ where: { id, userId: user.id } });
+  const card = await prisma.card.findFirst({ where: { id, userId: user.id }, include: { attachments: true } });
   if (!card) return;
 
+  await Promise.allSettled(card.attachments.map((a) => deleteFromR2(a.storageKey)));
+
   await prisma.$transaction(async (tx) => {
+    await tx.attachment.deleteMany({ where: { cardId: id } });
+
     await tx.card.delete({ where: { id } });
 
-    // 删除会在该列留下 position 空洞，一并压实保持 0..n-1
     const rest = await tx.card.findMany({
       where: { userId: user.id, projectId: card.projectId, status: card.status },
       orderBy: { position: 'asc' },
       select: { id: true },
     });
+
     for (let i = 0; i < rest.length; i++) {
       await tx.card.update({ where: { id: rest[i].id }, data: { position: i } });
     }
@@ -254,13 +260,17 @@ export async function deleteProject(id: string) {
   // 显式清理关联数据，不单纯依赖数据库外键级联
   const cards = await prisma.card.findMany({
     where: { projectId: id, userId: user.id },
-    select: { id: true },
+    select: { id: true, attachments: { select: { storageKey: true } } },
   });
+
+  // 清理该项目所有卡片的附件文件
+  await Promise.allSettled(cards.flatMap((c) => c.attachments.map((a) => deleteFromR2(a.storageKey))));
   const cardIds = cards.map(c => c.id);
 
   await prisma.$transaction([
     ...(cardIds.length
       ? [
+          prisma.attachment.deleteMany({ where: { cardId: { in: cardIds } } }),
           prisma.comment.deleteMany({ where: { cardId: { in: cardIds } } }),
           prisma.subtask.deleteMany({ where: { cardId: { in: cardIds } } }),
           prisma.card.deleteMany({ where: { id: { in: cardIds } } }),
@@ -270,4 +280,58 @@ export async function deleteProject(id: string) {
   ]);
 
   revalidatePath('/');
+}
+
+
+// Attachment actions
+
+export async function uploadAttachment(cardId: string, formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) return { error: '未登录' };
+
+  const card = await prisma.card.findFirst({
+    where: { id: cardId, userId: user.id },
+    select: { id: true, projectId: true },
+  });
+  if (!card) return { error: '卡片不存在' };
+
+  const file = formData.get('file');
+  if (!(file instanceof File)) return { error: '未选择文件' };
+
+  try {
+    const meta = await createAttachmentForCard(cardId, user.id, card.projectId, file);
+    const attachment = await prisma.attachment.findUnique({ where: { id: meta.id } });
+    revalidatePath('/');
+    return { success: true, attachment };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : '上传失败' };
+  }
+}
+
+export async function deleteAttachment(id: string) {
+  const user = await getCurrentUser();
+  if (!user) return { error: '未登录' };
+
+  try {
+    await deleteAttachmentById(id, user.id);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : '删除失败' };
+  }
+
+  revalidatePath('/');
+  return { success: true };
+}
+
+// Aliases for common naming conventions used by tests/integrations
+
+export const addAttachment = uploadAttachment;
+export const createAttachment = uploadAttachment;
+export const removeAttachment = deleteAttachment;
+
+export async function getAttachments(cardId: string) {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('未登录');
+  const card = await prisma.card.findFirst({ where: { id: cardId, userId: user.id } });
+  if (!card) throw new Error('卡片不存在');
+  return prisma.attachment.findMany({ where: { cardId }, orderBy: { createdAt: 'asc' } });
 }

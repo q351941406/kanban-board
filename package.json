@@ -15,10 +15,12 @@
     "vercel-build": "prisma generate && prisma db push --accept-data-loss && next build"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1161.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@prisma/client": "^5.22.0",
+    "@smithy/core": "^3.38.1",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",

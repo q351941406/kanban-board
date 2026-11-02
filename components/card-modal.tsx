@@ -1,9 +1,10 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Card, COLUMNS, PRIORITIES } from '@/types';
-import { updateCard, moveCard, addSubtask, toggleSubtask, deleteSubtask, addComment, deleteCard } from '@/app/actions';
-import { X, Save, Trash2, Plus, ListChecks, MessageSquare, Send, CheckSquare } from 'lucide-react';
+import { updateCard, moveCard, addSubtask, toggleSubtask, deleteSubtask, addComment, deleteCard, uploadAttachment, deleteAttachment } from '@/app/actions';
+import { X, Save, Trash2, Plus, ListChecks, MessageSquare, Send, CheckSquare, Paperclip, Upload, Download, Image as ImageIcon } from 'lucide-react';
 import Sheet from '@/components/ui/sheet';
+import { formatFileSize, isImageMime } from '@/lib/attachment-utils';
 
 interface CardModalProps {
   card: Card;
@@ -19,6 +20,53 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
   const [newSubtask, setNewSubtask] = useState('');
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUploadFiles = useCallback(async (files: FileList | File[] | null) => {
+    if (!files) return;
+    const list = Array.from(files);
+    if (list.length === 0) return;
+    setUploading(true);
+    for (const file of list) {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await uploadAttachment(card.id, formData);
+      if (res?.error) {
+        alert(res.error);
+      }
+    }
+    setUploading(false);
+    onUpdate();
+  }, [card.id, onUpdate]);
+
+  const handleDeleteAttachment = useCallback(async (id: string) => {
+    if (!confirm('确定删除此附件？')) return;
+    const res = await deleteAttachment(id);
+    if (res?.error) alert(res.error);
+    onUpdate();
+  }, [onUpdate]);
+
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const files = e.clipboardData?.files;
+      if (files && files.length > 0) {
+        e.preventDefault();
+        handleUploadFiles(files);
+      }
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [handleUploadFiles]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPreviewImage(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   const handleSave = async () => {
     setLoading(true);
     // 状态变更不能只 update 字段：需要和拖拽一样走 moveCard，
@@ -282,6 +330,236 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
             </div>
           </div>
 
+          {/* 附件 */}
+
+          <div className="mb-5">
+
+            <div className="flex items-center gap-2 mb-3">
+
+              <Paperclip className="w-4 h-4 text-text-tertiary" />
+
+              <span className="text-xs font-medium text-text-tertiary uppercase tracking-wider">
+
+                附件
+
+              </span>
+
+              {card.attachments && card.attachments.length > 0 && (
+
+                <span className="text-[10px] text-text-tertiary ml-auto">
+
+                  {card.attachments.length}
+
+                </span>
+
+              )}
+
+            </div>
+
+
+
+            {/* 上传拖拽区 */}
+
+            <div
+
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+
+              onDragLeave={() => setDragOver(false)}
+
+              onDrop={(e) => {
+
+                e.preventDefault();
+
+                setDragOver(false);
+
+                handleUploadFiles(e.dataTransfer.files);
+
+              }}
+
+              onClick={() => fileInputRef.current?.click()}
+
+              className={`
+
+                border-2 border-dashed rounded-xl p-3 mb-3 text-center cursor-pointer
+
+                transition-all duration-200
+
+                ${dragOver
+
+                  ? 'border-brand-400 bg-brand-50/40 dark:bg-brand-500/5'
+
+                  : 'border-border-light hover:border-brand-300 bg-surface-hover/40'
+
+                }
+
+              `}
+
+            >
+
+              <input
+
+                ref={fileInputRef}
+
+                type="file"
+
+                multiple
+
+                className="hidden"
+
+                onChange={(e) => handleUploadFiles(e.target.files)}
+
+              />
+
+              <div className="flex items-center justify-center gap-2 text-xs text-text-tertiary">
+
+                {uploading ? (
+
+                  <>
+
+                    <Upload className="w-3.5 h-3.5 animate-bounce" />
+
+                    <span>上传中...</span>
+
+                  </>
+
+                ) : (
+
+                  <>
+
+                    <Upload className="w-3.5 h-3.5" />
+
+                    <span>点击选择、拖拽文件到此处，或 Ctrl/Cmd+V 粘贴截图</span>
+
+                  </>
+
+                )}
+
+              </div>
+
+            </div>
+
+
+
+            {/* 附件列表 */}
+
+            <div className="space-y-2">
+
+              {(card.attachments || []).length === 0 && (
+
+                <p className="text-xs text-text-tertiary px-1">暂无附件</p>
+
+              )}
+
+              {(card.attachments || []).map((att) => {
+
+                const isImg = isImageMime(att.mimeType);
+
+                return (
+
+                  <div
+
+                    key={att.id}
+
+                    className="flex items-center gap-3 px-3 py-2 rounded-xl bg-surface-hover dark:bg-surface-muted group transition-all duration-200"
+
+                  >
+
+                    {isImg ? (
+
+                      <button type="button" onClick={() => setPreviewImage({ url: `/api/attachments/${att.id}`, name: att.fileName })} className="shrink-0 focus:outline-none" title="点击放大">
+
+                        <img
+
+                          src={`/api/attachments/${att.id}`}
+
+                          alt={att.fileName}
+
+                          className="w-12 h-12 rounded-lg object-cover border border-border-light"
+
+                        />
+
+                      </button>
+
+                    ) : (
+
+                      <div className="w-12 h-12 rounded-lg bg-surface flex items-center justify-center shrink-0 border border-border-light">
+
+                        <ImageIcon className="w-5 h-5 text-text-tertiary" />
+
+                      </div>
+
+                    )}
+
+                    <div className="flex-1 min-w-0">
+
+                      <a
+
+                        href={`/api/attachments/${att.id}`}
+
+                        target="_blank"
+
+                        rel="noreferrer"
+
+                        className="text-sm text-text-primary font-medium truncate hover:text-brand-500 transition-colors block"
+
+                        title={att.fileName}
+
+                      >
+
+                        {att.fileName}
+
+                      </a>
+
+                      <p className="text-[10px] text-text-tertiary mt-0.5">
+
+                        {formatFileSize(att.size)}
+
+                      </p>
+
+                    </div>
+
+                    <a
+
+                      href={`/api/attachments/${att.id}`}
+
+                      download={att.fileName}
+
+                      className="w-8 h-8 pointer-coarse:w-11 pointer-coarse:h-11 rounded-lg flex items-center justify-center text-text-tertiary hover:text-text-primary hover:bg-surface transition-all duration-200"
+
+                      title="下载"
+
+                    >
+
+                      <Download className="w-4 h-4" />
+
+                    </a>
+
+                    <button
+
+                      onClick={() => handleDeleteAttachment(att.id)}
+
+                      className="w-8 h-8 pointer-coarse:w-11 pointer-coarse:h-11 rounded-lg flex items-center justify-center text-text-tertiary hover:text-error hover:bg-error/10 transition-all duration-200"
+
+                      title="删除"
+
+                    >
+
+                      <Trash2 className="w-4 h-4" />
+
+                    </button>
+
+                  </div>
+
+                );
+
+              })}
+
+            </div>
+
+          </div>
+
+
+
           {/* 评论 */}
           <div>
             <div className="flex items-center gap-2 mb-3">
@@ -328,6 +606,51 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
             </div>
           </div>
       </div>
+
+
+
+      {previewImage && (
+
+        <div
+
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+
+          onClick={() => setPreviewImage(null)}
+
+        >
+
+          <button
+
+            type="button"
+
+            onClick={() => setPreviewImage(null)}
+
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center transition-all"
+
+            aria-label="关闭"
+
+          >
+
+            <X className="w-5 h-5" />
+
+          </button>
+
+          <img
+
+            src={previewImage.url}
+
+            alt={previewImage.name}
+
+            className="max-w-full max-h-full object-contain rounded-xl shadow-2xl cursor-zoom-out"
+
+            onClick={(e) => e.stopPropagation()}
+
+          />
+
+        </div>
+
+      )}
+
     </Sheet>
   );
 }

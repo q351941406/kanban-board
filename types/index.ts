@@ -26,6 +26,16 @@ export interface Comment {
   user: { id: string; name: string; email: string };
 }
 
+export interface Attachment {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  createdAt: Date;
+  cardId: string;
+  url?: string;
+}
+
 export interface Card {
   id: string;
   title: string;
@@ -36,6 +46,7 @@ export interface Card {
   projectId: string;
   subtasks: Subtask[];
   comments: Comment[];
+  attachments: Attachment[];
 }
 
 export const COLUMNS = [

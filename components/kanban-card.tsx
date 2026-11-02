@@ -2,7 +2,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Card, PRIORITIES } from '@/types';
-import { GripVertical, ListChecks, MessageSquare, AlertCircle } from 'lucide-react';
+import { GripVertical, ListChecks, MessageSquare, AlertCircle, Paperclip } from 'lucide-react';
 
 interface KanbanCardProps {
   card: Card;
@@ -98,6 +98,12 @@ export default function KanbanCard({ card, onClick }: KanbanCardProps) {
             <div className="flex items-center gap-1 text-text-tertiary">
               <MessageSquare className="w-3 h-3" />
               <span className="text-[10px] font-medium">{card.comments.length}</span>
+            </div>
+          )}
+          {card.attachments && card.attachments.length > 0 && (
+            <div className="flex items-center gap-1 text-text-tertiary">
+              <Paperclip className="w-3 h-3" />
+              <span className="text-[10px] font-medium">{card.attachments.length}</span>
             </div>
           )}
         </div>

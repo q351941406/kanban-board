@@ -42,7 +42,7 @@ export default async function Home({
 
   const cards = await prisma.card.findMany({
     where: { userId: user.id, projectId: currentProject.id },
-    include: { subtasks: true, comments: { include: { user: true } } },
+    include: { subtasks: true, comments: { include: { user: true } }, attachments: true },
     orderBy: { position: 'asc' },
   });
 
