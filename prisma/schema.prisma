@@ -37,7 +37,7 @@ model Card {
   title       String
   description String?
   status      String      @default("todo")
-  priority    String      @default("medium")
+  priority    String      @default("low")
   position    Int         @default(0)
   userId      String
   projectId   String

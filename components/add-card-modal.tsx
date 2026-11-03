@@ -15,7 +15,7 @@ interface AddCardModalProps {
 export default function AddCardModal({ defaultStatus, onClose, onUpdate, projectId }: AddCardModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState('medium');
+  const [priority, setPriority] = useState('low');
   const [status, setStatus] = useState(defaultStatus);
   const [loading, setLoading] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
